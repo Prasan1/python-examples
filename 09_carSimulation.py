@@ -2,7 +2,7 @@
 #!/usr/bin/env python
 
 '''This program simulates a car engine.
-   This is a part of work assignment in Mosh python tutorial.
+   This is a part assignment in Mosh python tutorial.
    You can visit his website below: 
    https://codewithmosh.com/p/python-programming-course-beginners/?product_id=866084&coupon_code=YOUTUBE&preview=logged_out
    To watch his youtube video please follow the following link:
