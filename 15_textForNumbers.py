@@ -1,8 +1,7 @@
 
 #!/usr/bin/env python
 
-'''This is another assignment from Mosh's tutorial
-   of python. This program writes a textual representation
+'''This program writes a textual representation
    of numeric value.'''
 
 number = int(input("Enter a number:\n"))
