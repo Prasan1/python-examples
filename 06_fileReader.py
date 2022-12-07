@@ -4,8 +4,9 @@
 fileName = "story.txt"
 
 with open(fileName) as f:
-    content = f.readlines();
+    content = f.readlines()
+
+print(content)
 
 
-print("%s\n" %content);
 

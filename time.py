@@ -1,4 +1,4 @@
-#!/bin/usr/env python
+#!/bin/usr/env
 
 import time
 

@@ -8,4 +8,4 @@ print("------------------\n")
 print("Square of numbers\n")
 print("-------------------\n")
 for x in num:
-    print("The square of %d is %d\n" %(x,x**2))
+    print(f"The square of {x} is {x**2}")

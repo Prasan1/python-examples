@@ -1,6 +1,4 @@
-
-
-#!/usr/bin/env python
+#!/usr/bin/env
 
 '''This program converts the weight 
    from pound to kilogram unit and 
@@ -8,7 +6,7 @@
 
 
 weight = int(input("Please enter your weight: \n"))
-unit =input("Kilo or lbs? please enter the first letter only \n")
+unit =input("K(ilo) or L(bs)? please enter the first letter only \n")
 if unit.upper() =="L":
     converted_weight = weight *0.45
     print("Your weight is %d kilos. Thank you.\n" %converted_weight)
