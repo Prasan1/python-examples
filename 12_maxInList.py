@@ -1,5 +1,3 @@
-
-
 #!/usr/bin/env python
 
 ''' This program find the max and min number in a list'''
