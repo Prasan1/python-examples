@@ -1,0 +1,23 @@
+1. What are the features of python programming language? 
+2. What are the difference between python2 and python3 ?
+3. What is the difference between PEP and PIP ? 
+4. How does python manage memory? 
+5. What are python namespaces? 
+6. What are the key differences of list and tuple ? 
+7. Is there a difference between python module and python script?
+8. What is method overloading? and does python support method overloading?
+9. What is data serialization ? 
+10. How do one define global variable in python?
+11. What is list comprehension ? 
+12. What is lambda function ? 
+13. How do one perfoms floor or ceil division in python? 
+14. How does python 'is' operator work?
+15. What is deep copy and shallow copy? How this is done in python?
+16. Is python '__init__' a constructor? Explain.
+17. Why do we use 'self' in python? 
+18. What are generator?
+19. What are python .pyc files?
+20. Explain the difference between pass by value and pass by reference? Where does python stand in this? 
+
+This list is being updated with more questions. 
+All the coding challenges will be post here. For the theoritical answer please visit:https://ppaudyal9.wordpress.com/2024/01/31/python-interview-questions/ for answers
