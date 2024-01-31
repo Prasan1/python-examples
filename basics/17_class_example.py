@@ -12,12 +12,8 @@ class Person:
     def talk(self):
         print("The %s is talking.\n"%self.name)
 
-
-
 #create an object
-
 person = Person("Tom")
 
 #call the method talk()
-
 person.talk()
