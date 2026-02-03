@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ready Tasks</title>
+  <!-- Bootstrap 3 CSS -->
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <style>
+    /* Parent group card */
+    .parent-group {
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .parent-header {
+      padding: 12px 15px;
+      background-color: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .parent-header.complete {
+      background-color: #dff0d8;
+      border-color: #d6e9c6;
+    }
+    .parent-header.incomplete {
+      background-color: #fcf8e3;
+      border-color: #faebcc;
+    }
+    .parent-title {
+      font-weight: 600;
+      font-size: 15px;
+      margin: 0;
+    }
+    .parent-status {
+      font-size: 13px;
+    }
+    .parent-status .label {
+      font-size: 12px;
+    }
+
+    /* Task rows */
+    .task-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 15px;
+      border-bottom: 1px solid #eee;
+      transition: background-color 0.15s;
+    }
+    .task-row:last-child {
+      border-bottom: none;
+    }
+    .task-row:hover {
+      background-color: #f9f9f9;
+    }
+    .task-row.selected {
+      background-color: #dff0d8;
+    }
+    .task-row.disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .task-row.disabled:hover {
+      background-color: transparent;
+    }
+    .task-checkbox {
+      margin-right: 12px;
+    }
+    .task-info {
+      flex: 1;
+    }
+    .task-name {
+      font-weight: 500;
+      color: #333;
+    }
+    .task-meta {
+      font-size: 12px;
+      color: #777;
+      margin-top: 2px;
+    }
+    .task-actions {
+      margin-left: 10px;
+    }
+
+    /* Action bar */
+    .action-bar {
+      background-color: #fff;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .action-bar .form-group {
+      margin: 0;
+    }
+
+    /* Waiting indicator */
+    .waiting-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .waiting-badge .glyphicon {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Spinning animation */
+    .spinning {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container" style="margin-top: 30px;">
+
+  <h3 style="margin-bottom: 20px;">
+    <span class="glyphicon glyphicon-list-alt"></span> Tasks Ready for Release
+  </h3>
+
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <div>
+      <label style="margin: 0; font-weight: normal; cursor: pointer;">
+        <input type="checkbox" id="selectAllComplete"> Select all complete groups
+      </label>
+    </div>
+    <div class="form-group">
+      <label class="sr-only">Move to</label>
+      <select class="form-control" id="targetState" style="width: auto; display: inline-block;">
+        <option value="">-- Select destination --</option>
+        {% for state in next_states %}
+        <option value="{{ state.id }}">{{ state.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="button" class="btn btn-success" id="btnMoveTasks" disabled>
+      <span class="glyphicon glyphicon-share-alt"></span>
+      Move Selected (<span id="selectedCount">0</span>)
+    </button>
+    <div class="text-muted" style="margin-left: auto; font-size: 13px;">
+      <span class="glyphicon glyphicon-info-sign"></span>
+      Only tasks from complete groups can be moved
+    </div>
+  </div>
+
+  <!-- Parent Groups -->
+  {% if parent_groups %}
+    {% for group in parent_groups %}
+    <div class="parent-group" data-parent-id="{{ group.parent_id }}">
+      <!-- Parent Header -->
+      <div class="parent-header {% if group.is_complete %}complete{% else %}incomplete{% endif %}">
+        <div>
+          <h5 class="parent-title">
+            <span class="glyphicon glyphicon-folder-open"></span>
+            {{ group.parent_name }}
+            <small style="color: #666; font-weight: normal;">({{ group.parent_id }})</small>
+          </h5>
+        </div>
+        <div class="parent-status">
+          {% if group.is_complete %}
+            <span class="label label-success">
+              <span class="glyphicon glyphicon-ok"></span>
+              All {{ group.total_expected }} tasks ready
+            </span>
+          {% else %}
+            <span class="label label-warning waiting-badge">
+              <span class="glyphicon glyphicon-hourglass"></span>
+              Waiting: {{ group.ready_count }} of {{ group.total_expected }} tasks
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Tasks in this parent -->
+      <div class="task-list">
+        {% for task in group.tasks %}
+        <div class="task-row {% if not group.is_complete %}disabled{% endif %}"
+             data-task-id="{{ task.id }}"
+             data-parent-id="{{ group.parent_id }}"
+             data-complete="{{ 'true' if group.is_complete else 'false' }}">
+          <input type="checkbox"
+                 class="task-checkbox"
+                 data-task-id="{{ task.id }}"
+                 data-parent-id="{{ group.parent_id }}"
+                 {% if not group.is_complete %}disabled{% endif %}>
+          <div class="task-info">
+            <span class="task-name">{{ task.name }}</span>
+            <span class="label label-{% if task.priority == 'High' %}danger{% elif task.priority == 'Medium' %}warning{% else %}default{% endif %}" style="margin-left: 8px;">
+              {{ task.priority }}
+            </span>
+            <div class="task-meta">
+              <span class="glyphicon glyphicon-user"></span> {{ task.assignee }}
+              {% if task.arrived_at %}
+              <span style="margin-left: 10px;">
+                <span class="glyphicon glyphicon-time"></span> Arrived: {{ task.arrived_at|format_date }}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="task-actions">
+            <button type="button" class="btn btn-info btn-xs btn-details" data-task-id="{{ task.id }}">
+              <span class="glyphicon glyphicon-eye-open"></span> Details
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <!-- Empty State -->
+    <div class="panel panel-default">
+      <div class="panel-body text-center" style="padding: 50px;">
+        <span class="glyphicon glyphicon-inbox" style="font-size: 48px; color: #ccc;"></span>
+        <p class="text-muted" style="margin-top: 15px;">No tasks in READY state</p>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Back Link -->
+  <div style="margin-top: 20px;">
+    <a href="/" class="btn btn-default">
+      <span class="glyphicon glyphicon-arrow-left"></span> Back to Workflow
+    </a>
+  </div>
+
+</div>
+
+<!-- Task Details Modal -->
+<div class="modal fade" id="taskDetailModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title" id="modalTaskName">Task Details</h4>
+      </div>
+      <div class="modal-body" id="modalTaskBody">
+        <div class="text-center">
+          <span class="glyphicon glyphicon-refresh spinning"></span> Loading...
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Move Modal -->
+<div class="modal fade" id="confirmMoveModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Confirm Move</h4>
+      </div>
+      <div class="modal-body">
+        <p>Move <strong id="confirmCount">0</strong> task(s) to <strong id="confirmState">--</strong>?</p>
+        <div id="confirmTaskList" style="max-height: 200px; overflow-y: auto; margin-top: 10px;">
+          <!-- Task list populated by JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="btnConfirmMove">
+          <span class="glyphicon glyphicon-ok"></span> Confirm Move
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- jQuery and Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+
+<script>
+$(document).ready(function() {
+
+  // Update selection count and button state
+  function updateSelection() {
+    var count = $('.task-checkbox:checked').length;
+    var hasTarget = $('#targetState').val() !== '';
+
+    $('#selectedCount').text(count);
+    $('#btnMoveTasks').prop('disabled', count === 0 || !hasTarget);
+
+    // Highlight selected rows
+    $('.task-row').each(function() {
+      var $checkbox = $(this).find('.task-checkbox');
+      if (!$checkbox.prop('disabled')) {
+        $(this).toggleClass('selected', $checkbox.is(':checked'));
+      }
+    });
+
+    // Update "select all complete" checkbox
+    var totalComplete = $('.task-checkbox:not(:disabled)').length;
+    var checkedComplete = $('.task-checkbox:not(:disabled):checked').length;
+    $('#selectAllComplete').prop('checked', checkedComplete === totalComplete && totalComplete > 0);
+    $('#selectAllComplete').prop('indeterminate', checkedComplete > 0 && checkedComplete < totalComplete);
+  }
+
+  // Checkbox change handler
+  $(document).on('change', '.task-checkbox', function() {
+    updateSelection();
+  });
+
+  // Target state change handler
+  $('#targetState').on('change', function() {
+    updateSelection();
+  });
+
+  // Select all complete groups
+  $('#selectAllComplete').on('change', function() {
+    var isChecked = $(this).is(':checked');
+    $('.task-checkbox:not(:disabled)').prop('checked', isChecked);
+    updateSelection();
+  });
+
+  // View task details
+  $(document).on('click', '.btn-details', function() {
+    var taskId = $(this).data('task-id');
+
+    $('#modalTaskName').text('Loading...');
+    $('#modalTaskBody').html('<div class="text-center"><span class="glyphicon glyphicon-refresh spinning"></span> Loading...</div>');
+    $('#taskDetailModal').modal('show');
+
+    $.get('/api/tasks/' + taskId, function(task) {
+      $('#modalTaskName').text(task.name);
+      $('#modalTaskBody').html(
+        '<table class="table table-condensed table-bordered">' +
+        '<tr><th style="width: 130px;">Task ID</th><td>' + task.id + '</td></tr>' +
+        '<tr><th>Parent Workflow</th><td>' + task.parent_name + ' (' + task.parent_id + ')</td></tr>' +
+        '<tr><th>State</th><td><span class="label label-info">' + task.state + '</span></td></tr>' +
+        '<tr><th>Priority</th><td><span class="label label-' +
+          (task.priority === 'High' ? 'danger' : task.priority === 'Medium' ? 'warning' : 'default') +
+          '">' + task.priority + '</span></td></tr>' +
+        '<tr><th>Assignee</th><td>' + task.assignee + '</td></tr>' +
+        '<tr><th>Arrived At</th><td>' + (task.arrived_at || '--') + '</td></tr>' +
+        '<tr><th>Description</th><td>' + task.description + '</td></tr>' +
+        '</table>'
+      );
+    }).fail(function() {
+      $('#modalTaskBody').html('<div class="alert alert-danger">Failed to load task details</div>');
+    });
+  });
+
+  // Move tasks button - show confirm modal
+  $('#btnMoveTasks').on('click', function() {
+    var targetState = $('#targetState').val();
+    var targetStateName = $('#targetState option:selected').text();
+
+    if (!targetState) {
+      alert('Please select a destination state');
+      return;
+    }
+
+    var selectedTasks = [];
+    $('.task-checkbox:checked').each(function() {
+      var $row = $(this).closest('.task-row');
+      selectedTasks.push({
+        id: $(this).data('task-id'),
+        name: $row.find('.task-name').text()
+      });
+    });
+
+    $('#confirmCount').text(selectedTasks.length);
+    $('#confirmState').text(targetStateName);
+
+    // Build task list
+    var listHtml = '<ul class="list-group" style="margin: 0;">';
+    selectedTasks.forEach(function(task) {
+      listHtml += '<li class="list-group-item" style="padding: 8px 12px;">' +
+                  '<span class="glyphicon glyphicon-ok text-success"></span> ' +
+                  task.name + '</li>';
+    });
+    listHtml += '</ul>';
+    $('#confirmTaskList').html(listHtml);
+
+    $('#confirmMoveModal').modal('show');
+  });
+
+  // Confirm move action
+  $('#btnConfirmMove').on('click', function() {
+    var taskIds = [];
+    $('.task-checkbox:checked').each(function() {
+      taskIds.push($(this).data('task-id'));
+    });
+
+    var targetState = $('#targetState').val();
+    var $btn = $(this);
+
+    $btn.prop('disabled', true).html('<span class="glyphicon glyphicon-refresh spinning"></span> Moving...');
+
+    $.ajax({
+      url: '/api/tasks/move',
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify({
+        task_ids: taskIds,
+        target_state: targetState
+      }),
+      success: function(response) {
+        // Remove moved tasks with animation
+        var parentsToCheck = new Set();
+
+        taskIds.forEach(function(id) {
+          var $row = $('.task-row[data-task-id="' + id + '"]');
+          var parentId = $row.data('parent-id');
+          parentsToCheck.add(parentId);
+
+          $row.fadeOut(300, function() {
+            $(this).remove();
+          });
+        });
+
+        // After animation, check if parent groups are empty
+        setTimeout(function() {
+          parentsToCheck.forEach(function(parentId) {
+            var $group = $('.parent-group[data-parent-id="' + parentId + '"]');
+            if ($group.find('.task-row').length === 0) {
+              $group.fadeOut(300, function() {
+                $(this).remove();
+
+                // Check if all groups are gone
+                if ($('.parent-group').length === 0) {
+                  $('.action-bar').after(
+                    '<div class="panel panel-default">' +
+                    '<div class="panel-body text-center" style="padding: 50px;">' +
+                    '<span class="glyphicon glyphicon-inbox" style="font-size: 48px; color: #ccc;"></span>' +
+                    '<p class="text-muted" style="margin-top: 15px;">No tasks in READY state</p>' +
+                    '</div></div>'
+                  );
+                }
+              });
+            }
+          });
+        }, 350);
+
+        $('#confirmMoveModal').modal('hide');
+        updateSelection();
+
+        // Show success notification
+        var $alert = $('<div class="alert alert-success alert-dismissible" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;">' +
+          '<button type="button" class="close" data-dismiss="alert">&times;</button>' +
+          '<span class="glyphicon glyphicon-ok-circle"></span> ' +
+          response.count + ' task(s) moved to ' + $('#targetState option:selected').text() +
+          '</div>');
+        $('body').append($alert);
+        setTimeout(function() { $alert.fadeOut(function() { $(this).remove(); }); }, 4000);
+      },
+      error: function(xhr) {
+        var errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Failed to move tasks';
+        alert('Error: ' + errorMsg);
+      },
+      complete: function() {
+        $btn.prop('disabled', false).html('<span class="glyphicon glyphicon-ok"></span> Confirm Move');
+      }
+    });
+  });
+
+});
+</script>
+
+</body>
+</html>
